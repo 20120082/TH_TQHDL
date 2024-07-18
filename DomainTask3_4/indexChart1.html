@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="./styleChart1.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histogram for Rating of all Invoice</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div>
+        <div class="title-container">
+            <h1>Distribution for rating of all Invoice in 2019</h1>
+        </div>
+        <div class="dropdown-container">
+            <label for="binSizeSelect">Select bin size:</label>
+            <select id="binSizeSelect"></select>
+        </div>
+        <div class="chart-container">
+            <svg width="1200" height="500"></svg>
+        </div>
+        <div id="tooltip" class="tooltip" style="opacity: 0;"></div>
+    </div>
+    <script>
+        const binCollection = [0.1, 0.2, 0.5, 1];
+
+        // Populate dropdown list
+        const binSizeSelect = document.getElementById("binSizeSelect");
+        binCollection.forEach(size => {
+            const option = document.createElement("option");
+            option.value = size;
+            option.text = size;
+            binSizeSelect.appendChild(option);
+        });
+
+        // Initial binSize value
+        let binSize = binCollection[0];
+
+        binSizeSelect.addEventListener("change", function() {
+            binSize = parseFloat(this.value);
+            updateChart(binSize);
+        });
+
+        function updateChart(binSize) {
+            // Clear previous SVG elements
+            d3.select("svg").selectAll("*").remove();
+
+            // Dimensions
+            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+            const width = 1200 - margin.left - margin.right;
+            const height = 500 - margin.top - margin.bottom;
+
+            // Create SVG container
+            const svg = d3.select("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Tooltip
+            const tooltip = d3.select("#tooltip");
+
+            // Read CSV file
+            d3.csv("dataChart1.csv").then(function(data) {
+                // Parse the data
+                data.forEach(d => {
+                    d.Rating = +d.Rating; // Convert to number
+                });
+
+                // Set up histogram bins
+                const histogram = d3.histogram()
+                    .value(d => d.Rating)
+                    .domain([d3.min(data, d => d.Rating), d3.max(data, d => d.Rating)])
+                    .thresholds(d3.range(d3.min(data, d => d.Rating), d3.max(data, d => d.Rating) + binSize, binSize)); // Set bin size
+
+                const bins = histogram(data);
+
+                // Set up scales
+                const xScale = d3.scaleLinear()
+                    .domain([d3.min(bins, d => d.x0), d3.max(bins, d => d.x1)])
+                    .range([0, width]);
+
+                const yScale = d3.scaleLinear()
+                    .domain([0, d3.max(bins, d => d.length)])
+                    .range([height, 0]);
+
+                // Create bars
+                const bars = svg.selectAll(".bar")
+                    .data(bins)
+                .enter().append("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => xScale(d.x0))
+                    .attr("y", d => yScale(d.length))
+                    .attr("width", d => {
+                        const barWidth = xScale(d.x1) - xScale(d.x0);
+                        return barWidth > 0 ? barWidth - 1 : 0; // Ensure width is not negative
+                    })
+                    .attr("height", d => height - yScale(d.length))
+                    .on("mouseover", function(event, d) {
+                        tooltip.transition().duration(200).style("opacity", 0.9);
+                        tooltip.html(`Rating Range: ${d.x0.toFixed(1)} - ${d.x1.toFixed(1)}<br>Frequency: ${d.length}`)
+                            .style("left", (event.pageX + 5) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+
+                        // Dim other bars
+                        bars.classed("dimmed", true);
+                        d3.select(this).classed("dimmed", false);
+                    })
+                    .on("mouseout", function() {
+                        tooltip.transition().duration(500).style("opacity", 0);
+
+                        // Remove dim effect
+                        bars.classed("dimmed", false);
+                    });
+
+                // Add X axis with ticks at binSize intervals
+                svg.append("g")
+                    .attr("class", "x-axis")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(xScale)
+                        .ticks((d3.max(bins, d => d.x1) - d3.min(bins, d => d.x0)) / binSize) // Adjust the number of ticks
+                        .tickFormat(d3.format(".1f"))) // Format ticks to one decimal place
+                .append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", width / 2)
+                    .attr("y", margin.bottom - 5)
+                    .attr("text-anchor", "middle")
+                    .text("Rating");
+
+                // Add Y axis
+                svg.append("g")
+                    .attr("class", "y-axis")
+                    .call(d3.axisLeft(yScale).ticks(10))
+                .append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", -margin.left)
+                    .attr("y", -margin.top + 10)
+                    .attr("text-anchor", "middle")
+                    .attr("transform", "rotate(-90)")
+                    .text("Frequency");
+
+                // Add X axis label
+                svg.append("text")
+                    .attr("class", "axis")
+                    .attr("x", width / 2)
+                    .attr("y", height + margin.bottom - 5)
+                    .attr("text-anchor", "middle")
+                    .text("Rating");
+
+                // Add Y axis label
+                svg.append("text")
+                    .attr("class", "axis")
+                    .attr("transform", "rotate(-90)")
+                    .attr("x", -height / 2)
+                    .attr("y", -margin.left + 15)
+                    .attr("text-anchor", "middle")
+                    .text("Frequency");
+            }).catch(function(error) {
+                console.error('Error loading or parsing data:', error);
+            });
+        }
+
+        // Initial chart rendering
+        updateChart(binSize);
+    </script>
+</body>
+</html>
