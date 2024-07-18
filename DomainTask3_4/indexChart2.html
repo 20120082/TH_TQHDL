@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="./styleChart2.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Line Chart for Frequency by Week and Product Line</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class = "title-container">
+        <h1>Purchasing Frequency in a day by Week and Product Line in 2019</h1>
+    </div>
+    <div class="dropdown-container">
+        <label for="week-select">Select Week:</label>
+        <select id="week-select"></select>
+        <label for="product-line-select">Select Product Line:</label>
+        <select id="product-line-select"></select>
+    </div>
+    <div class = "chart-container">
+        <svg width="800" height="600"></svg>
+    </div>
+    <script >
+        const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+        const width = 800 - margin.left - margin.right;
+        const height = 600 - margin.top - margin.bottom;
+
+        // Create SVG container
+        const svg = d3.select("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+        
+        // Create tooltip
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        // Read CSV file
+        d3.csv("dataChart2.csv").then(function(data) {
+            // Parse the data
+            data.forEach(d => {
+                d.Week = +d.Week;
+                d.Hours = +d.Hours;
+            });
+
+            // Extract unique weeks and product lines
+            const weeks = [...new Set(data.map(d => d.Week))].sort((a, b) => a - b);
+            const productLines = [...new Set(data.map(d => d.ProductLine))];
+
+            // Create dropdown options
+            const weekSelect = d3.select("#week-select");
+            const productLineSelect = d3.select("#product-line-select");
+
+            weekSelect.selectAll("option")
+                .data(["All", ...weeks])
+              .enter().append("option")
+                .text(d => d);
+
+            productLineSelect.selectAll("option")
+                .data(["All", ...productLines])
+              .enter().append("option")
+                .text(d => d);
+
+            // Function to filter data and update the chart
+            function updateChart() {
+                const selectedWeek = weekSelect.property("value");
+                const selectedProductLine = productLineSelect.property("value");
+
+                let filteredData = data;
+                if (selectedWeek !== "All") {
+                    filteredData = filteredData.filter(d => d.Week === +selectedWeek);
+                }
+                if (selectedProductLine !== "All") {
+                    filteredData = filteredData.filter(d => d.ProductLine === selectedProductLine);
+                }
+
+                // Nest data by hours and sort
+                const nestedData = d3.groups(filteredData, d => d.Hours)
+                                    .map(d => ({ Hours: d[0], count: d[1].length }))
+                                    .sort((a, b) => a.Hours - b.Hours); // Ensure data is sorted by Hours
+
+                // Set up scales
+                const xScale = d3.scaleLinear()
+                    .domain([9, 21])
+                    .range([0, width]);
+
+                const yScale = d3.scaleLinear()
+                    .domain([0, d3.max(nestedData, d => d.count) || 1])
+                    .range([height, 0]);
+
+                // Clear previous elements
+                svg.selectAll("*").remove();
+
+                // Add X axis
+                svg.append("g")
+                    .attr("class", "x-axis")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(xScale).ticks(12))
+                  .append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", width / 2)
+                    .attr("y", margin.bottom - 5)
+                    .attr("text-anchor", "middle")
+                    .text("Hours");
+
+                // Add Y axis
+                // const yAxis = d3.axisLeft(yScale);
+                // if (maxYValue <= 10) {
+                //     yAxis.ticks(maxYValue).tickFormat(d3.format("d")); // Use integer ticks if maxYValue is <= 10
+                // }
+                const hourCounts = d3.rollup(
+    filteredData,
+    v => v.length,
+    d => d.Hours
+);
+
+const hourCountsArray = Array.from(hourCounts, ([hour, count]) => ({ hour, count }));
+
+                const maxYValue = d3.max(hourCountsArray, d => d.count);
+                
+            const yAxis = d3.axisLeft(yScale);
+            if (maxYValue <= 10) {
+                yAxis.ticks(maxYValue).tickFormat(d3.format("d")); // Use integer ticks if maxYValue is <= 10
+            }
+                svg.append("g")
+                    .attr("class", "y-axis")
+                    .call(yAxis)
+                  .append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", -margin.left)
+                    .attr("y", -margin.top + 10)
+                    .attr("text-anchor", "middle")
+                    .attr("transform", "rotate(-90)")
+                    .text("Frequency");
+
+                // Add X axis label
+                svg.append("text")
+                    .attr("class", "axis")
+                    .attr("x", width / 2)
+                    .attr("y", height + margin.bottom - 5)
+                    .attr("text-anchor", "middle")
+                    .text("Hour");
+
+                // Add Y axis label
+                svg.append("text")
+                    .attr("class", "axis")
+                    .attr("transform", "rotate(-90)")
+                    .attr("x", -height / 2)
+                    .attr("y", -margin.left + 15)
+                    .attr("text-anchor", "middle")
+                    .text("Number of Bills");
+
+                // Create line generator
+                const line = d3.line()
+                    .x(d => xScale(d.Hours))
+                    .y(d => yScale(d.count));
+
+                // Add the line
+                svg.append("path")
+                    .datum(nestedData)
+                    .attr("class", "line")
+                    .attr("d", line);
+                
+                    const dots = svg.selectAll(".dot")
+                .data(nestedData)
+              .enter().append("circle")
+                .attr("class", "dot")
+                .attr("cx", d => xScale(d.Hours))
+                .attr("cy", d => yScale(d.count))
+                .attr("r", 5)
+                .on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    tooltip.html(`Hours: ${d.Hours}<br>Number of Bills: ${d.count}`)
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                    
+                    // Highlight hovered dot
+                    d3.select(this).classed("hover", true);
+                    
+                    // Dim other dots and line
+                    svg.selectAll(".dot").classed("dimmed", true);
+                    svg.select(".line").classed("dimmed", true);
+                    
+                    // Un-dim hovered dot
+                    d3.select(this).classed("dimmed", false);
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    
+                    // Remove highlight from hovered dot
+                    d3.select(this).classed("hover", false);
+                    
+                    // Remove dimming from all dots and line
+                    svg.selectAll(".dot").classed("dimmed", false);
+                    svg.select(".line").classed("dimmed", false);
+                });
+                    
+            }
+
+            // Initial chart update
+            updateChart();
+
+            // Update chart when dropdown selection changes
+            weekSelect.on("change", updateChart);
+            productLineSelect.on("change", updateChart);
+        }).catch(function(error) {
+            console.error('Error loading or parsing data:', error);
+        });
+    </script>
+
+</body>
+</html>
