@@ -1,0 +1,108 @@
+#content div {
+    display: inline-block;
+    margin: 2px;
+    background-color: orange;
+    color: white;
+    padding: 8px;
+    width: 100px;
+    height: 14px;
+    text-align: center;
+    align-items: center;
+}
+
+body 
+{
+    font-size: 14px;
+    color: #333;
+    background-color:rgb(255, 255, 255);
+}
+
+#menu
+{
+    margin: 10px;
+}
+
+.bar {
+    fill: steelblue;
+    transition: opacity 0.3s;
+}
+.bar:hover {
+    fill: rgb(41, 93, 134);
+}
+.bar.dimmed {
+    opacity: 0.3;
+}
+.axis-label {
+    font-size: 14px;
+    font-family: Arial, sans-serif; /* Change font family here */
+}
+.axis{
+    font-size: 16px;
+    font-weight: bold;
+    font-family: Arial, sans-serif; /* Change font family here */
+}
+.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 150px;
+    height: 30px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+    font-family: Arial, sans-serif; /* Change font family here */
+}
+/* Style the dropdown container */
+.dropdown-container {
+    margin-bottom: 20px;
+    font-family: Arial, sans-serif; /* Change font family here */
+}
+
+/* Style the label */
+.dropdown-container label {
+    font-size: 14px;
+    font-weight: bold;
+    margin-right: 10px;
+    .chart-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    font-family: Arial, sans-serif; /* Change font family here */
+}
+}
+
+/* Style the select element */
+.dropdown-container select {
+    padding: 5px 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    font-family: Arial, sans-serif; /* Change font family here */
+}
+
+/* Style the select element on hover */
+.dropdown-container select:hover {
+    border-color: #888;
+}
+
+/* Style the select element on focus */
+.dropdown-container select:focus {
+    outline: none;
+    border-color: #555;
+}
+
+.chart-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.title-container {
+    margin-bottom: 20px;
+    text-align: center;
+    font-family: Arial, sans-serif; /* Change font family here */
+}
