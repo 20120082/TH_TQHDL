@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Pie Chart</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .main-container {
+      background-color: #1e88e5;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chart-container {
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 1000px;
+      height: 600px;
+    }
+
+    .chart {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 20px;
+
+    }
+
+    .chart-title {
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      text-align: center;
+    }
+
+    svg {
+      width: 400px;
+      height: 400px;
+    }
+
+    .legend {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      margin-left: 20px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      margin-right: 5px;
+    }
+
+    .axis text {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+    }
+
+    .axis .domain {
+      display: none;
+    }
+
+    .bar {
+      fill: #1e88e5;
+    }
+
+    .hover {
+      position: absolute;
+      padding: 8px;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="main-container">
+    <div class="chart-container">
+      <h1>Domain Task 1:Tỉ lệ phần trăm số lượng hóa đơn giữa các thành phố trên toàn bộ hóa đơn</h1>
+      <div class="chart">
+        <svg id="pie-chart"></svg>
+        <div id="legend"></div>
+      </div>
+      <div class="chart-title">Biểu đồ tỉ lệ phần trăm hóa đơn theo thành phố</div>
+    </div>
+  </div>
+  <div class="main-container">
+    <div class="chart-container">
+      <h1>Domain Task 2:So sánh số lượng hóa đơn của khách hàng nam và nữ trên các dòng sản phẩm</h1>
+      <div>
+        <label for="product-line-select">Select Product Line:</label>
+        <select id="product-line-select"></select>
+      </div>
+      <div class="chart">
+        <svg id="bar-chart"></svg>
+        <div class="hover"></div>
+      </div>
+      <div class="chart-title">Biểu đồ so sánh số lượng hóa đơn của khách hàng nam nữ trong từng dòng sản phẩm</div>
+    </div>
+  </div>
+
+  <script>
+    d3.csv("supermarket_sales.csv").then(function (data) {
+
+      var total = data.length;
+      var cityPercentages = d3.rollups(data, v => (v.length / total) * 100, d => d.City);
+      var color = d3.scaleOrdinal(d3.schemeCategory10);
+      var radius = Math.min(200, 200) / 2;
+
+      // Tạo đối tượng SVG 
+      var svg = d3.select("#pie-chart")
+        .attr("width", 400)
+        .attr("height", 400)
+        .append("g")
+        .attr("transform", "translate(" + 200 + "," + 200 + ")");
+
+      // Tạo đối tượng pie chart
+      var pie = d3.pie()
+        .value(function (d) { return d[1]; });
+
+      // Tạo đường cung cho các phần tử trong đồ thị
+      var arc = d3.arc()
+        .innerRadius(0)
+        .outerRadius(radius);
+
+      // Vẽ đồ thị pie chart
+      var arcs = svg.selectAll("arc")
+        .data(pie(cityPercentages))
+        .enter()
+        .append("g");
+
+      arcs.append("path")
+        .attr("d", arc)
+        .attr("fill", function (d) { return color(d.data[0]); });
+
+      // Thêm nhãn cho các phần tử trong đồ thị
+      arcs.append("text")
+        .attr("transform", function (d) { return "translate(" + arc.centroid(d) + ")"; })
+        .attr("text-anchor", "middle")
+        .text(function (d) { return d.data[1].toFixed(2) + "%"; });
+
+      // Tạo phần ghi chú các màu tương ứng với các thành phố
+      var legend = d3.select("#legend")
+        .append("div")
+        .attr("class", "legend");
+
+      var legendItems = legend.selectAll(".legend-item")
+        .data(cityPercentages)
+        .enter()
+        .append("div")
+        .attr("class", "legend-item");
+
+      legendItems.append("div")
+        .attr("class", "legend-color")
+        .style("background-color", function (d) { return color(d[0]); });
+
+      legendItems.append("div")
+        .text(function (d) { return d[0]; });
+
+
+
+      
+      //Tạo chức năng filter theo dòng sản phẩm cho barchart
+      var productLines = Array.from(new Set(data.map(d => d["Product line"])));
+      var select = document.getElementById("product-line-select");
+      productLines.forEach(function (productLine) {
+        var option = document.createElement("option");
+        option.text = productLine;
+        option.value = productLine;
+        select.add(option);
+      });
+
+      function updateChart(productLine) {
+        var genderCounts = d3.rollup(data, v => d3.sum(v, d => d["Product line"] === productLine ? 1 : 0), d => d.Gender);
+        var genderData = Array.from(genderCounts, ([gender, count]) => ({
+          gender: gender,
+          count: count
+        }));
+
+        var margin = { top: 20, right: 20, bottom: 60, left: 60 };
+        var width = 400 - margin.left - margin.right;
+        var height = 400 - margin.top - margin.bottom;
+
+        //Tạo trục hoành
+        var x = d3.scaleBand()
+          .domain(genderData.map(d => d.gender))
+          .range([0, width])
+          .padding(0.4);
+
+
+        //Tạo trục tung
+        var y = d3.scaleLinear()
+          .domain([0, d3.max(genderData, d => d.count)])
+          .range([height, 0]);
+
+        var svg = d3.select("#bar-chart")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        //Tạo chức năng hover
+        var hover = d3.select(".hover");
+
+        svg.selectAll(".bar")
+          .data(genderData)
+          .enter()
+          .append("rect")
+          .attr("x", d => x(d.gender))
+          .attr("y", d => y(d.count))
+          .attr("width", x.bandwidth())
+          .attr("height", d => height - y(d.count))
+          .attr("class", "bar")
+          .on("mouseover", function (event, d) {
+            hover.style("opacity", 1)
+              .html(`Gender: ${d.gender}<br>Count: ${d.count}`)
+              .style("left", event.pageX + "px")
+              .style("top", event.pageY + "px");
+          })
+          .on("mouseout", function () {
+            hover.style("opacity", 0);
+          });
+
+        svg.append("g")
+          .attr("class", "axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(d3.axisBottom(x))
+          .selectAll("text");
+
+        svg.append("g")
+          .attr("class", "axis")
+          .call(d3.axisLeft(y));
+      }
+
+      updateChart("Electronic accessories");
+
+      //Cập nhật lại chart khi có sự thay đổi của khung lựa chọn
+      var select = document.getElementById("product-line-select");
+      select.addEventListener("change", function () {
+        var selectedProductLine = select.value;
+        d3.select("#bar-chart").selectAll("*").remove();
+        updateChart(selectedProductLine);
+      });
+    });
+  </script>
+</body>
+
+</html>
