@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Domain task 7 and 8</title>
+    <style>
+        div {
+            text-align: center;
+            font-size: 20px;
+            padding-top: 25px;
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: rgb(185, 224, 249);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+
+
+<body>
+    <div>Domain task 6: Hiển thị sự phân bố của Rating, Quantity và Product line</div>
+    <script>
+        //Cac nguon su dung
+        //https://www.youtube.com/watch?v=xkBheRZTkaw
+        //https://d3js.org/d3-scale-chromatic/categorical
+        //https://d3-graph-gallery.com/graph/bubble_template.html
+
+        const csvURL = "supermarket_sales.csv";
+        //Bien doi kieu string sang number/float
+        const parseRow = (d) => {
+            d.Rating = +d.Rating;
+            d.Quantity = +d.Quantity;
+            return d;
+        };
+        
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const svg = d3.select('body')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        const xValue = (d) => d.Rating;
+        const yValue = (d) => d.Quantity;
+        const zValue = (d) => d["Product line"];
+
+        const margin = {top: 50, right: 300, bottom: 150, left: 300}
+        const color = d3.scaleOrdinal(d3.schemeCategory10); 
+        // Add a scale for color
+        var myColor = d3.scaleOrdinal()
+            .domain(["Electronic accessories", "Fashion accessories", "Food and beverages",
+            "Health and beauty", "Home and lifestyle", "Sports and travel"])
+            .range(d3.schemeSet1);
+
+        // What to do when one group is hovered
+        //var highlight = function(d){
+        //    // reduce opacity of all groups
+        //    d3.selectAll(".bubbles").style("opacity", .05)
+        //    // expect the one that is hovered
+        //    d3.selectAll("."+d).style("opacity", 1)
+        //}
+
+        // And when it is not hovered anymore
+        var noHighlight = function(d){
+            d3.selectAll(".bubbles").style("opacity", 1)
+        }
+
+        const main = async () => {
+            const data = await d3.csv(csvURL, parseRow);
+
+            const x = d3.scaleLinear()
+                .domain([3.5, 10.5])
+                .range([margin.left, width - margin.right]);
+
+            const y = d3.scaleLinear()
+                .domain([0, 11])
+                .range([height - margin.bottom, margin.top]);
+
+
+            const marks = data.map(d => ({
+                x: x(xValue(d)),
+                y: y(yValue(d)),
+                
+                color: myColor(zValue(d)),
+                title: `(${xValue(d)}, ${yValue(d)}, ${zValue(d)})`,
+            }));
+
+            svg.selectAll('circle')
+                .data(marks)
+                .join('circle')
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y)
+                .attr('fill', (d) => d.color)
+                .attr('r', 4)
+                .append('title')
+                .text((d) => d.title);
+
+            svg.append('g')
+                .attr('transform', `translate(${margin.left}, 0)`).
+                call(d3.axisLeft(y));
+            svg.append('g')
+                .attr('transform', `translate(0, ${height - margin.bottom})`)
+                .call(d3.axisBottom(x));
+
+            // Add X axis label:
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", width/2 + 50)
+                .attr("y", height - margin.bottom + 50)
+                .text("Rating");
+
+            // Y axis label:
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("transform", "rotate(-90)")
+                .attr("y", margin.left - 50)
+                .attr("x", -margin.top - 200)
+                .text("Quantity")
+
+            // Add legend: segments
+            var size = 20
+            var allgroups = ["Electronic accessories", "Fashion accessories", "Food and beverages",
+                "Health and beauty", "Home and lifestyle", "Sports and travel"]
+            svg.selectAll("myrect")
+            .data(allgroups)
+            .enter()
+            .append("circle")
+                .attr("cx", width - margin.right)
+                .attr("cy", function(d,i){ return margin.top + i*(size+5)}) // 100 is where the first dot appears. 25 is the distance between dots
+                .attr("r", 7)
+                .style("fill", function(d){ return myColor(d)})
+                //.on("mouseover", highlight)
+                //.on("mouseleave", noHighlight)
+
+            // Add labels beside legend dots
+            svg.selectAll("mylabels")
+            .data(allgroups)
+            .enter()
+            .append("text")
+                .attr("x", width - margin.right + 10)
+                .attr("y", function(d,i){ return margin.top + i*(size+5)}) // 100 is where the first dot appears. 25 is the distance between dots
+                .style("fill", function(d){ return myColor(d)})
+                .text(function(d){ return d})
+                .attr("text-anchor", "left")
+                .style("alignment-baseline", "middle")
+                //.on("mouseover", highlight)
+                //.on("mouseleave", noHighlight)
+
+        };
+
+        main();
+    </script>
+</body>
+</html>
+
